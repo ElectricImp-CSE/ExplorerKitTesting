@@ -7,12 +7,38 @@
 // LED Lib
 #require "WS2812.class.nut:3.0.0"
 
+if (imp.environment() == ENVIRONMENT_CARD) {
+    ExplorerKit_001 <- {
+        "LED_SPI" : hardware.spi257,
+        "SENSOR_AND_GROVE_I2C" : hardware.i2c89,
+        "TEMP_HUMID_I2C_ADDR" : 0xBE,
+        "ACCEL_I2C_ADDR" : 0x32,
+        "PRESSURE_I2C_ADDR" : 0xB8,
+        "POWER_GATE_AND_WAKE_PIN" : hardware.pin1,
+        "AD_GROVE1_DATA1" : hardware.pin2,
+        "AD_GROVE2_DATA1" : hardware.pin5
+    }
+} else {
+    ExplorerKit_004m <- {
+        "LED_SPI" : hardware.spiAHSR,
+        "SENSOR_I2C" : hardware.i2cNM,
+        "GROVE_I2C" : hardware.i2cQP,
+        "TEMP_HUMID_I2C_ADDR" : 0xBE,
+        "ACCEL_I2C_ADDR" : 0x32,
+        "PRESSURE_I2C_ADDR" : 0xB8,
+        "POWER_GATE" : hardware.pinH,
+        "WAKE_PIN" : hardware.pinW,
+        "ACCEL_INT_PIN" : hardware.pinR,
+        "PRESSURE_INT_PIN" : hardware.pinS,
+        "AD_GROVE1_DATA1" : hardware.pinC,
+        "AD_GROVE1_DATA2" : hardware.pinB,
+        "AD_GROVE2_DATA1" : hardware.pinD,
+        "AD_GROVE2_DATA2" : hardware.pinK
+    }
+}
+
 
 class ExplorerKitTest {
-
-    static  TEMP_HUMID_ADDR = 0xBE;
-    static  ACCEL_ADDR = 0x32;
-    static  PRESS_ADDR = 0xB8;
 
     _i2c = null;
     _spi = null;
@@ -35,31 +61,38 @@ class ExplorerKitTest {
         imp.enableblinkup(true);
         _enableAccelInt = ENABLE_ACCEL_INT;
         _enablePressInt = ENABLE_PRESS_INT;
+        local tempHumidAddr, pressAddr, accelAddr;
 
         if (imp.environment() == ENVIRONMENT_CARD) {
             // IMP 001
-            _i2c = hardware.i2c89;
-            _spi = hardware.spi257;
-            _powerGate = hardware.pin1;
-            _wake = hardware.pin1;
+            _i2c = ExplorerKit_001.SENSOR_AND_GROVE_I2C;
+            _spi = ExplorerKit_001.LED_SPI;
+            _powerGate = ExplorerKit_001.POWER_GATE_AND_WAKE_PIN;
+            _wake = ExplorerKit_001.POWER_GATE_AND_WAKE_PIN;
+            tempHumidAddr = ExplorerKit_001.TEMP_HUMID_I2C_ADDR
+            pressAddr = ExplorerKit_001.TEMP_HUMID_I2C_ADDR
+            accelAddr = ExplorerKit_001.TEMP_HUMID_I2C_ADDR
         } else {
             // IMP 004m
             _004 = true;
-            _i2c = hardware.i2cNM;
-            _spi = hardware.spiAHSR;
-            _powerGate = hardware.pinH;
-            _wake = hardware.pinW;
-            _pressInt = hardware.pinS;
-            _accelInt = hardware.pinR;
+            _i2c = ExplorerKit_004m.SENSOR_I2C;
+            _spi = ExplorerKit_004m.LED_SPI;
+            _powerGate = ExplorerKit_004m.POWER_GATE;
+            _wake = ExplorerKit_004m.WAKE_PIN;
+            _pressInt = ExplorerKit_004m.PRESSURE_INT_PIN;
+            _accelInt = ExplorerKit_004m.ACCEL_INT_PIN;
+            tempHumidAddr = ExplorerKit_004m.TEMP_HUMID_I2C_ADDR
+            pressAddr = ExplorerKit_004m.TEMP_HUMID_I2C_ADDR
+            accelAddr = ExplorerKit_004m.TEMP_HUMID_I2C_ADDR
         }
 
         _i2c.configure(CLOCK_SPEED_400_KHZ);
 
         // initialize sensors
         led = WS2812(_spi, 1);
-        tempHumid = HTS221(_i2c, TEMP_HUMID_ADDR);
-        press = LPS22HB(_i2c, PRESS_ADDR);
-        accel = LIS3DH(_i2c, ACCEL_ADDR);
+        tempHumid = HTS221(_i2c, tempHumidAddr);
+        press = LPS22HB(_i2c, pressAddr);
+        accel = LIS3DH(_i2c, accelAddr);
 
         checkWakeReason();
     }
@@ -188,38 +221,38 @@ class ExplorerKitTest {
         if (_004) {
             server.log("Power to Grove 1 D1 High");
             hardware.pinP.configure(DIGITAL_OUT, 0);
-            hardware.pinC.configure(DIGITAL_OUT, 1);
+            ExplorerKit_004m.AD_GROVE1_DATA1.configure(DIGITAL_OUT, 1);
             imp.sleep(timer);
             server.log("Power to Grove 1 D2 High");
-            hardware.pinC.configure(DIGITAL_OUT, 0);
-            hardware.pinB.configure(DIGITAL_OUT, 1);
+            ExplorerKit_004m.AD_GROVE1_DATA1.configure(DIGITAL_OUT, 0);
+            ExplorerKit_004m.AD_GROVE1_DATA2.configure(DIGITAL_OUT, 1);
         } else {
             server.log("Power to Grove 1 Analog/Digital High");
             hardware.pin9.configure(DIGITAL_OUT, 0);
-            hardware.pin2.configure(DIGITAL_OUT, 1);
+            ExplorerKit_001.AD_GROVE1_DATA1.configure(DIGITAL_OUT, 1);
         }
         imp.sleep(timer);
 
         if (_004) {
             server.log("Power to Grove 2 D1 High");
-            hardware.pinB.configure(DIGITAL_OUT, 0);
-            hardware.pinD.configure(DIGITAL_OUT, 1);
+            ExplorerKit_004m.AD_GROVE1_DATA2.configure(DIGITAL_OUT, 0);
+            ExplorerKit_004m.AD_GROVE2_DATA1.configure(DIGITAL_OUT, 1);
             imp.sleep(timer);
             server.log("Power to Grove 2 D2 High");
-            hardware.pinD.configure(DIGITAL_OUT, 0);
-            hardware.pinK.configure(DIGITAL_OUT, 1);
+            ExplorerKit_004m.AD_GROVE2_DATA1.configure(DIGITAL_OUT, 0);
+            ExplorerKit_004m.AD_GROVE2_DATA2.configure(DIGITAL_OUT, 1);
         } else {
             server.log("Power to Grove 2 Analog/Digital High");
-            hardware.pin2.configure(DIGITAL_OUT, 0);
-            hardware.pin5.configure(DIGITAL_OUT, 1);
+            ExplorerKit_001.AD_GROVE1_DATA1.configure(DIGITAL_OUT, 0);
+            ExplorerKit_001.AD_GROVE2_DATA1.configure(DIGITAL_OUT, 1);
         }
         imp.sleep(timer);
 
         // reset pins
         if (_004) {
-            hardware.pinK.configure(DIGITAL_OUT, 0);
+            ExplorerKit_004m.AD_GROVE2_DATA2.configure(DIGITAL_OUT, 0);
         } else {
-            _spi.configure(MSB_FIRST, 7500);
+            ExplorerKit_001.AD_GROVE2_DATA1.configure(DIGITAL_OUT, 0);
         }
     }
 
