@@ -124,10 +124,11 @@ class ExplorerKitTest {
 
     function testSleep() {
         server.log("At full power...");
-        imp.sleep(10);
-        server.log("Going to deep sleep for 20s...");
-        accel.enable(false);
-        imp.onidle(function() { imp.deepsleepfor(20); })
+        imp.wakeup(10, function() {
+            server.log("Going to deep sleep for 20s...");
+            accel.enable(false);
+            imp.onidle(function() { imp.deepsleepfor(20); })
+        }.bindenv(this))
     }
 
     function testTempHumid() {
@@ -180,80 +181,69 @@ class ExplorerKitTest {
     function testGrove(timer, repeatI2C = false) {
         _powerGate.configure(DIGITAL_OUT, 1);
 
-        server.log("Power to SCL High");
-        if (_004) {
-            hardware.pinQ.configure(DIGITAL_OUT, 1);
-        } else {
-            hardware.pin8.configure(DIGITAL_OUT, 1);
-        }
-        imp.sleep(timer);
+        // configure test variables
+        local pins = [];
+        local msgs = [];
+        local idx = 0;
+        local run;
 
-        server.log("Power to SDA High");
+        // build out the arrays with pin values and test messages
         if (_004) {
-            hardware.pinQ.configure(DIGITAL_OUT, 0);
-            hardware.pinP.configure(DIGITAL_OUT, 1);
-        } else {
-            hardware.pin8.configure(DIGITAL_OUT, 0);
-            hardware.pin9.configure(DIGITAL_OUT, 1);
-        }
-        imp.sleep(timer);
-
-        if (repeatI2C) {
-            server.log("Power to SCL High");
-            if (_004) {
-                hardware.pinQ.configure(DIGITAL_OUT, 1);
-            } else {
-                hardware.pin8.configure(DIGITAL_OUT, 1);
+            pins.push(hardware.pinQ);
+            msgs.push("Setting SCL High...");
+            pins.push(hardware.pinP);
+            msgs.push("Setting SDA High...");
+            if (repeatI2C) {
+                pins.push(hardware.pinQ);
+                msgs.push("Setting SCL High...");
+                pins.push(hardware.pinP);
+                msgs.push("Setting SDA High...");
             }
-            imp.sleep(timer);
-
-            server.log("Power to SDA High");
-            if (_004) {
-                hardware.pinQ.configure(DIGITAL_OUT, 0);
-                hardware.pinP.configure(DIGITAL_OUT, 1);
-            } else {
-                hardware.pin8.configure(DIGITAL_OUT, 0);
-                hardware.pin9.configure(DIGITAL_OUT, 1);
+            pins.push(ExplorerKit_004m.AD_GROVE1_DATA1);
+            msgs.push("Setting Grove 1 D1 High...");
+            pins.push(ExplorerKit_004m.AD_GROVE1_DATA2);
+            msgs.push("Setting Grove 1 D2 High...");
+            pins.push(ExplorerKit_004m.AD_GROVE2_DATA1);
+            msgs.push("Setting Grove 2 D1 High...");
+            pins.push(ExplorerKit_004m.AD_GROVE2_DATA2);
+            msgs.push("Setting Grove 2 D2 High...");
+        } else {
+            pins.push(hardware.pin8);
+            msgs.push("Setting SCL High...");
+            pins.push(hardware.pin9);
+            msgs.push("Setting SDA High...");
+            if (repeatI2C) {
+                pins.push(hardware.pin8);
+                msgs.push("Setting SCL High...");
+                pins.push(hardware.pin9);
+                msgs.push("Setting SDA High...");
             }
-            imp.sleep(timer);
+            pins.push(ExplorerKit_001.AD_GROVE1_DATA1);
+            msgs.push("Setting Grove 1 D1 High...");
+            pins.push(ExplorerKit_001.AD_GROVE2_DATA1);
+            msgs.push("Setting Grove 2 D1 High...");
         }
 
-        if (_004) {
-            server.log("Power to Grove 1 D1 High");
-            hardware.pinP.configure(DIGITAL_OUT, 0);
-            ExplorerKit_004m.AD_GROVE1_DATA1.configure(DIGITAL_OUT, 1);
-            imp.sleep(timer);
-            server.log("Power to Grove 1 D2 High");
-            ExplorerKit_004m.AD_GROVE1_DATA1.configure(DIGITAL_OUT, 0);
-            ExplorerKit_004m.AD_GROVE1_DATA2.configure(DIGITAL_OUT, 1);
-        } else {
-            server.log("Power to Grove 1 Analog/Digital High");
-            hardware.pin9.configure(DIGITAL_OUT, 0);
-            ExplorerKit_001.AD_GROVE1_DATA1.configure(DIGITAL_OUT, 1);
-        }
-        imp.sleep(timer);
+        // create test loop
+        run = function () {
+            _driveAllGrovePinsLow();
+            server.log(msgs[idx]);
+            pins[idx].configure(DIGITAL_OUT, 1);
+            idx++;
 
-        if (_004) {
-            server.log("Power to Grove 2 D1 High");
-            ExplorerKit_004m.AD_GROVE1_DATA2.configure(DIGITAL_OUT, 0);
-            ExplorerKit_004m.AD_GROVE2_DATA1.configure(DIGITAL_OUT, 1);
-            imp.sleep(timer);
-            server.log("Power to Grove 2 D2 High");
-            ExplorerKit_004m.AD_GROVE2_DATA1.configure(DIGITAL_OUT, 0);
-            ExplorerKit_004m.AD_GROVE2_DATA2.configure(DIGITAL_OUT, 1);
-        } else {
-            server.log("Power to Grove 2 Analog/Digital High");
-            ExplorerKit_001.AD_GROVE1_DATA1.configure(DIGITAL_OUT, 0);
-            ExplorerKit_001.AD_GROVE2_DATA1.configure(DIGITAL_OUT, 1);
+            if (idx < pins.len()) {
+                imp.wakeup(timer, run.bindenv(this));
+            } else {
+                imp.wakeup(timer, function() {
+                    server.log("Grove test loop done.");
+                    _driveAllGrovePinsLow();
+                }.bindenv(this));
+            }
         }
-        imp.sleep(timer);
 
-        // reset pins
-        if (_004) {
-            ExplorerKit_004m.AD_GROVE2_DATA2.configure(DIGITAL_OUT, 0);
-        } else {
-            ExplorerKit_001.AD_GROVE2_DATA1.configure(DIGITAL_OUT, 0);
-        }
+        // run test
+        run();
+
     }
 
     function testInterrupts(testWake = false) {
@@ -289,6 +279,22 @@ class ExplorerKitTest {
 
     // Private functions/Interrupt helpers
     // -------------------------------------------------------
+
+    function _driveAllGrovePinsLow() {
+        if (_004) {
+            hardware.pinQ.configure(DIGITAL_OUT, 0);
+            hardware.pinP.configure(DIGITAL_OUT, 0);
+            ExplorerKit_004m.AD_GROVE1_DATA1.configure(DIGITAL_OUT, 0);
+            ExplorerKit_004m.AD_GROVE1_DATA2.configure(DIGITAL_OUT, 0);
+            ExplorerKit_004m.AD_GROVE2_DATA1.configure(DIGITAL_OUT, 0);
+            ExplorerKit_004m.AD_GROVE2_DATA2.configure(DIGITAL_OUT, 0);
+        } else {
+            hardware.pin8.configure(DIGITAL_OUT, 0);
+            hardware.pin9.configure(DIGITAL_OUT, 0);
+            ExplorerKit_001.AD_GROVE1_DATA1.configure(DIGITAL_OUT, 0);
+            ExplorerKit_001.AD_GROVE2_DATA1.configure(DIGITAL_OUT, 0);
+        }
+    }
 
     function _sleep() {
         if (_wake.read() == 1) {
@@ -338,6 +344,7 @@ class ExplorerKitTest {
     }
 
 }
+
 
 
 // SETUP
