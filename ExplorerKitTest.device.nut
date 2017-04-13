@@ -299,7 +299,7 @@ class ExplorerKitTest {
     function _sleep() {
         if (_wake.read() == 1) {
             logIntPinState();
-            imp.wakeup(1, sleep.bindenv(this));
+            imp.wakeup(1, _sleep.bindenv(this));
         } else {
             imp.onidle(function() { server.sleepfor(300); });
         }
