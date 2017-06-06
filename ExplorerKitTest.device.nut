@@ -69,9 +69,9 @@ class ExplorerKitTest {
             _spi = ExplorerKit_001.LED_SPI;
             _powerGate = ExplorerKit_001.POWER_GATE_AND_WAKE_PIN;
             _wake = ExplorerKit_001.POWER_GATE_AND_WAKE_PIN;
-            tempHumidAddr = ExplorerKit_001.TEMP_HUMID_I2C_ADDR
-            pressAddr = ExplorerKit_001.TEMP_HUMID_I2C_ADDR
-            accelAddr = ExplorerKit_001.TEMP_HUMID_I2C_ADDR
+            tempHumidAddr = ExplorerKit_001.TEMP_HUMID_I2C_ADDR;
+            pressAddr = ExplorerKit_001.PRESSURE_I2C_ADDR;
+            accelAddr = ExplorerKit_001.ACCEL_I2C_ADDR;
         } else {
             // IMP 004m
             _004 = true;
@@ -81,9 +81,9 @@ class ExplorerKitTest {
             _wake = ExplorerKit_004m.WAKE_PIN;
             _pressInt = ExplorerKit_004m.PRESSURE_INT_PIN;
             _accelInt = ExplorerKit_004m.ACCEL_INT_PIN;
-            tempHumidAddr = ExplorerKit_004m.TEMP_HUMID_I2C_ADDR
-            pressAddr = ExplorerKit_004m.TEMP_HUMID_I2C_ADDR
-            accelAddr = ExplorerKit_004m.TEMP_HUMID_I2C_ADDR
+            tempHumidAddr = ExplorerKit_004m.TEMP_HUMID_I2C_ADDR;
+            pressAddr = ExplorerKit_004m.PRESSURE_I2C_ADDR;
+            accelAddr = ExplorerKit_004m.ACCEL_I2C_ADDR;
         }
 
         _i2c.configure(CLOCK_SPEED_400_KHZ);
